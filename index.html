@@ -1,21 +1,81 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Three.js Example</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Underwater Sphere Cloud</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
-        body { margin: 0; }
-        canvas { display: block; }
+        body {
+            font-family: 'Inter', sans-serif;
+            overflow: hidden; /* Prevent scrolling */
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+        /* Custom styles for the info panel transitions */
+        /* Base state: hidden, slid off to the right */
+        .info-panel-leave-to {
+            transform: translateX(100%);
+        }
+
+        /* Transition properties: apply when either enter or leave active */
+        .info-panel-enter-active,
+        .info-panel-leave-active {
+            transition: transform 0.3s ease-out;
+        }
+
+        /* Target state for "entering": fully visible */
+        .info-panel-enter-active {
+            transform: translateX(0);
+        }
     </style>
 </head>
-<body>
-    <script type="importmap">
-        {
-            "imports": {
-                "three": "https://unpkg.com/three/build/three.module.js",
-                "three/addons/": "https://unpkg.com/three/examples/jsm/"
-            }
-        }
-    </script>
+<body class="bg-gray-900 text-white flex h-screen">
+    <div class="relative flex flex-grow">
+        <canvas id="threeJsCanvas" class="flex-grow"></canvas>
+
+        <div class="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex flex-col items-center space-y-2 z-10">
+            <div class="flex space-x-2">
+                <button id="moveForward" class="p-3 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg transition duration-200 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"></path></svg>
+                </button>
+            </div>
+            <div class="flex space-x-2">
+                <button id="moveLeft" class="p-3 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg transition duration-200 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                </button>
+                <button id="moveDown" class="p-3 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg transition duration-200 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path></svg>
+                </button>
+                <button id="moveUp" class="p-3 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg transition duration-200 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"></path></svg>
+                </button>
+                <button id="moveRight" class="p-3 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg transition duration-200 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                </button>
+            </div>
+            <div class="flex space-x-2">
+                <button id="moveBackward" class="p-3 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg transition duration-200 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path></svg>
+                </button>
+            </div>
+        </div>
+
+        <div id="infoPanel" class="fixed top-0 right-0 h-full w-80 bg-gray-800 bg-opacity-90 shadow-2xl p-6 z-20 rounded-l-lg info-panel-leave-to">
+            <h2 class="text-2xl font-bold mb-4 text-blue-300" id="dotName">Sphere Info</h2>
+            <p class="text-gray-300 text-sm mb-2"><strong class="text-blue-400">ID:</strong> <span id="dotId"></span></p>
+            <p class="text-gray-300 text-sm mb-2"><strong class="text-blue-400">Position:</strong> <span id="dotPosition"></span></p>
+            <p class="text-gray-300 text-sm mb-4"><strong class="text-blue-400">Description:</strong> <span id="dotDescription"></span></p>
+            <button id="closeInfoPanel" class="mt-4 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md shadow-md transition duration-200 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-75">Close</button>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <script type="module" src="./main.js"></script>
 </body>
 </html>

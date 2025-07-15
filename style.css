@@ -1,3 +1,16 @@
-body {
-  margin: 0;
+/* Custom styles for the info panel transitions */
+/* Base state: hidden, slid off to the right */
+.info-panel-leave-to {
+    transform: translateX(100%);
+}
+
+/* Transition properties: apply when either enter or leave active */
+.info-panel-enter-active,
+.info-panel-leave-active {
+    transition: transform 0.3s ease-out;
+}
+
+/* Target state for "entering": fully visible */
+.info-panel-enter-active {
+    transform: translateX(0);
 }

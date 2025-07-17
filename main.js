@@ -17,7 +17,7 @@ function init() {
     // Set a deep blue background color to simulate underwater
     scene.background = new THREE.Color(0x000033);
     // Add fog to simulate depth and atmosphere in the underwater environment
-    scene.fog = new THREE.Fog(0x000055, 10, 200); // Color, near, far
+    scene.fog = new THREE.Fog(0x000055, 10, 400); // Color, near, far
 
     // Add ambient light to illuminate all objects equally
     const ambientLight = new THREE.AmbientLight(0x404040, 2); // Soft white light, increased intensity
@@ -72,8 +72,8 @@ function init() {
 
 // Function to create the cloud of 3D spheres with labels
 function createSphereCloud() {
-    const numSpheres = 45; // Reduced number of spheres (between 50 and 100)
-    const sphereRadius = 0.8; // Increased sphere size
+    const numSpheres = 20; // Reduced number of spheres (between 50 and 100)
+    const sphereRadius = 1; // Increased sphere size
     const boxSize = 100; // Reduced scattering area
 
     for (let i = 0; i < numSpheres; i++) {
@@ -98,22 +98,72 @@ function createSphereCloud() {
         sphere.castShadow = true; // Spheres will cast shadows
         sphere.receiveShadow = true; // Spheres will receive shadows
 
+        const dataTypes = [
+            {
+                displayName: "Gate",
+                position: {x, y, z},
+                icon: "https://i.imgur.com/HZUWX7U.png",
+                sharkSide: "LEFT" || "RIGHT",
+            },
+            {
+                displayName: "Torpille",
+                position: {x, y, z},
+                icon: "https://i.imgur.com/gpOUW7M.png",
+                sharkSide: "UP" || "DOWN",
+            },
+            {
+                displayName: "Bin",
+                position: {x, y, z},
+                icon: "https://i.imgur.com/mWro7Ai.png",
+                sharkSide: "Q1-2" || "Q3-4",
+            },
+            {
+                displayName: "Slalom Blanc",
+                position: {x, y, z},
+                icon: "https://i.imgur.com/70Yi8wu.png"
+            },
+            {
+                displayName: "Slalom Rouge",
+                position: {x, y, z},
+                icon: "https://i.imgur.com/igiQpsN.png"
+            },
+            {
+                displayName: "Table",
+                position: {x, y, z},
+                icon: "https://i.imgur.com/XCfKBHr.png"
+            },
+            {
+                displayName: "Octogone",
+                icon: "https://i.imgur.com/CpxZ4LN.png",
+                position: {x, y, z}
+            },
+        ]
+        
+        sphere.type = dataTypes[Math.floor(Math.random() * dataTypes.length)]
+
         // Store dummy data for each sphere directly on the mesh's userData
         sphere.userData = {
             id: i + 1,
-            name: `Obstacle ${i + 1}`, // Renamed to reflect "obstacle course" context
-            description: `This obstacle is located at (${x.toFixed(2)}, ${y.toFixed(2)}, ${z.toFixed(2)}). It presents a unique challenge in the course.`,
-            position: new THREE.Vector3(x, y, z)
+            displayName: sphere.type.displayName,
+            position: new THREE.Vector3(x, y, z),
+            lastKnown: "",
+            timestamp: getRandomDateTimeWithinFrame()
         };
+
+        const posSphere = new THREE.Mesh(new THREE.SphereGeometry(Math.random() * (sphereRadius + 10), 26, 26), new THREE.MeshLambertMaterial({ color: new THREE.Color(1, 1, 1), transparent: true, opacity: 0.2 }));
+        posSphere.position.set(x, y, z);
+        posSphere.castShadow = true; // Spheres will cast shadows
+        posSphere.receiveShadow = true; // Spheres will receive shadows
 
         // Add the sphere to the scene and to our spheres array
         scene.add(sphere);
+        scene.add(posSphere);
         spheres.push(sphere);
 
         // Create a text label for the sphere
         const canvas = document.createElement('canvas');
         const context = canvas.getContext('2d');
-        const labelText = `Obstacle ${i + 1}`;
+        const labelText = sphere.userData.displayName;
         const fontSize = 32; // Pixels
         const font = `${fontSize}px Inter`;
 
@@ -164,7 +214,7 @@ function createGroundPlane() {
     const planeMaterial = new THREE.MeshLambertMaterial({ color: 0x001122, side: THREE.DoubleSide }); // Dark blue, two-sided
     const plane = new THREE.Mesh(planeGeometry, planeMaterial);
     plane.rotation.x = -Math.PI / 2; // Rotate to be horizontal
-    plane.position.y = -50; // Position below the spheres
+    plane.position.y = -100; // Position below the spheres
     plane.receiveShadow = true; // Plane will receive shadows
     scene.add(plane);
 }
@@ -323,14 +373,63 @@ function moveCamera(direction) {
     controls.update(); // Update controls after manual camera movement
 }
 
+function getRandomDateTimeWithinFrame() {
+    // Get the current time in milliseconds since epoch
+    const now = Date.now(); 
+
+    // Calculate 5 minutes from now in milliseconds
+    const nbMinutesPlus = 5;
+    const fiveMinutesLater = now + (nbMinutesPlus * 60 * 1000); // nbMinutesPlus minutes * 60 seconds * 1000 milliseconds
+
+    // Generate a random timestamp between now and 5 minutes later
+    const randomTimestamp = Math.random() * (fiveMinutesLater - now) + now;
+
+    // Create a Date object from the random timestamp
+    const randomDate = new Date(randomTimestamp);
+
+    // Get date components
+    const day = String(randomDate.getDate()).padStart(2, '0');
+    const month = String(randomDate.getMonth() + 1).padStart(2, '0'); // Month is 0-indexed
+    const year = randomDate.getFullYear();
+
+    // Get time components
+    const hours = String(randomDate.getHours()).padStart(2, '0');
+    const minutes = String(randomDate.getMinutes()).padStart(2, '0');
+    const seconds = String(randomDate.getSeconds()).padStart(2, '0');
+
+    // Format the date and time
+    return `${day}-${month}-${year} ${hours}:${minutes}:${seconds}`;
+}
+
 // Function to display sphere information in the panel
 function displaySphereInfo(data) {
     const infoPanel = document.getElementById('infoPanel');
-    document.getElementById('dotName').textContent = data.name;
+    const customFieldLabel = document.getElementById('customFieldLabel');
+    const dotCustomLabelText = document.getElementById('dotCustomLabelText');
+
+    console.log(Date.parse(data.timestamp).toString());
+    
+    document.getElementById('dotName').textContent = data.displayName;
     document.getElementById('dotId').textContent = data.id;
     document.getElementById('dotPosition').textContent = `(${data.position.x.toFixed(2)}, ${data.position.y.toFixed(2)}, ${data.position.z.toFixed(2)})`;
-    document.getElementById('dotDescription').textContent = data.description;
-
+    document.getElementById('dotLastKnown').textContent = data.description;
+    document.getElementById('dotTimestamp').textContent = data.timestamp
+    
+    switch (data.displayName) {
+        case "Gate":
+            customFieldLabel.innerText = "Côté Shark:"
+            dotCustomLabelText.innerText = ["LEFT", "RIGHT"][Math.floor(Math.random() * 2)]
+            break;
+        case "Torpille":
+            customFieldLabel.innerText = "Côté Shark:"
+            dotCustomLabelText.innerText = ["UP", "DOWN"][Math.floor(Math.random() * 2)]
+            break;
+        case "Bin":
+            customFieldLabel.innerText = "Côté Shark:"
+            dotCustomLabelText.innerText = ["Q1-2", "Q3-4"][Math.floor(Math.random() * 2)]
+            break;
+    }
+    
     // Show the info panel with a slide-in effect
     infoPanel.classList.remove('info-panel-leave-to');
     infoPanel.classList.add('info-panel-enter-active');

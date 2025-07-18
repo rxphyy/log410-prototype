@@ -57,13 +57,13 @@ function createSphereCloud() {
     const connectorLineColor = 0x000000;
 
     const dataTypes = [
-        { displayName: "Gate", icon: "./assets/gate.png" },
-        { displayName: "Torpille", icon: "./assets/torpille.png" },
-        { displayName: "Bin", icon: "./assets/bin.png" },
-        { displayName: "Slalom Blanc", icon: "./assets/slalomblanc.png" },
-        { displayName: "Slalom Rouge", icon: "./assets/slalomrouge.png" },
-        { displayName: "Table", icon: "./assets/table.png" },
-        { displayName: "Octogone", icon: "./assets/octogone.png" }
+        { displayName: "Gate", icon: "./assets/Gate.png" },
+        { displayName: "Torpille", icon: "./assets/Torpille.png" },
+        { displayName: "Bin", icon: "./assets/Bin.png" },
+        { displayName: "Slalom Blanc", icon: "./assets/SlalomBlanc.png" },
+        { displayName: "Slalom Rouge", icon: "./assets/SlalomRouge.png" },
+        { displayName: "Table", icon: "./assets/Table.png" },
+        { displayName: "Octogone", icon: "./assets/Octogone.png" }
     ];
 
     const textureLoader = new THREE.TextureLoader();

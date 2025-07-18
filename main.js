@@ -105,7 +105,7 @@ function createSphereCloud() {
         const connectorSphere = new THREE.Mesh(
             new THREE.SphereGeometry(connectorSphereRadius, 16, 16),
             new THREE.MeshBasicMaterial({
-                color: 0x000099,
+                color: 0x000099, 
                 transparent: true,
                 opacity: 1
             })

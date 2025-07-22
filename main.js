@@ -208,24 +208,10 @@ function createTextSprite(text) {
     return sprite;
 }
 
-function createGroundPlane() {
-    const boxSize = 200;
-    const box = new THREE.Box3(
-        new THREE.Vector3(-boxSize / 2, -boxSize / 2, -boxSize / 2),
-        new THREE.Vector3(boxSize / 2, boxSize / 2, boxSize / 2)
-    );
-    const helper = new THREE.Box3Helper(box, 0x28a745);
-    scene.add(helper);
-}
-
-
 function createSubMarine() {
-    const boxSize = 100;
     const textureLoader = new THREE.TextureLoader();
-    const x = (Math.random() - 0.5) * boxSize;
-    const y = (Math.random() - 0.5) * boxSize - 10;
-    const z = (Math.random() - 0.5) * boxSize;
 
+    // Position the submarine at the center (0,0,0)
     const sousmar = new THREE.Sprite(
         new THREE.SpriteMaterial({
             map: textureLoader.load("./assets/submarine.png"),
@@ -235,11 +221,187 @@ function createSubMarine() {
     );
 
     const text = createTextSprite("AUV")
-    text.position.set(x, y - 8, z);
-    sousmar.position.set(x, y, z);
+    text.position.set(0, -8, 0); // Position text below the submarine
+    sousmar.position.set(0, 0, 0); // Center position
     sousmar.scale.set(15, 15, 1);
     scene.add(sousmar);
     scene.add(text)
+}
+
+function createGroundPlane() {
+    const boxSize = 200;
+    const gridSize = boxSize; // Grid matches bounding box size
+    const divisions = boxSize; // 1m divisions (since boxSize is 200m)
+    
+    // Create the main bounding box helper (color-coded to match axes)
+    const box = new THREE.Box3(
+        new THREE.Vector3(-boxSize / 2, -boxSize / 2, -boxSize / 2),
+        new THREE.Vector3(boxSize / 2, boxSize / 2, boxSize / 2)
+    );
+    
+    // Create colored box faces that match the axis colors
+    const edges = new THREE.EdgesGeometry(new THREE.BoxGeometry(boxSize, boxSize, boxSize));
+    const line = new THREE.LineSegments(
+        edges,
+        new THREE.LineBasicMaterial({ color: 0x28a745, transparent: true, opacity: 0.5 })
+    );
+    scene.add(line);
+    
+    // Create color-coded axes centered at (0,0,0) where submarine is
+    const axisSize = boxSize * 0.8; // Make axes slightly smaller than bounding box
+    
+    // X-axis (Red)
+    const xAxis = new THREE.ArrowHelper(
+        new THREE.Vector3(1, 0, 0),
+        new THREE.Vector3(0, 0, 0),
+        axisSize/2,
+        0xff0000,
+        2,  // headLength
+        1   // headWidth
+    );
+    scene.add(xAxis);
+    
+    // Y-axis (Green)
+    const yAxis = new THREE.ArrowHelper(
+        new THREE.Vector3(0, 1, 0),
+        new THREE.Vector3(0, 0, 0),
+        axisSize/2,
+        0x00ff00,
+        2,
+        1
+    );
+    scene.add(yAxis);
+    
+    // Z-axis (Blue)
+    const zAxis = new THREE.ArrowHelper(
+        new THREE.Vector3(0, 0, 1),
+        new THREE.Vector3(0, 0, 0),
+        axisSize/2,
+        0x0000ff,
+        2,
+        1
+    );
+    scene.add(zAxis);
+    
+    // Negative X-axis (Darker Red)
+    const negXAxis = new THREE.ArrowHelper(
+        new THREE.Vector3(-1, 0, 0),
+        new THREE.Vector3(0, 0, 0),
+        axisSize/2,
+        0x990000,
+        2,
+        1
+    );
+    scene.add(negXAxis);
+    
+    // Negative Y-axis (Darker Green)
+    const negYAxis = new THREE.ArrowHelper(
+        new THREE.Vector3(0, -1, 0),
+        new THREE.Vector3(0, 0, 0),
+        axisSize/2,
+        0x009900,
+        2,
+        1
+    );
+    scene.add(negYAxis);
+    
+    // Negative Z-axis (Darker Blue)
+    const negZAxis = new THREE.ArrowHelper(
+        new THREE.Vector3(0, 0, -1),
+        new THREE.Vector3(0, 0, 0),
+        axisSize/2,
+        0x000099,
+        2,
+        1
+    );
+    scene.add(negZAxis);
+
+    // Create a 3D grid centered at submarine position (0,0,0)
+    const gridColor = new THREE.Color(0x888888);
+    const gridOpacity = 0.2;
+    const gridTransparent = true;
+    
+    // XY Plane (horizontal at y=0)
+    const gridXY = new THREE.GridHelper(gridSize, divisions, gridColor, gridColor);
+    gridXY.position.y = 0; // Centered at submarine's y position
+    gridXY.material.opacity = gridOpacity;
+    gridXY.material.transparent = gridTransparent;
+    scene.add(gridXY);
+    
+    // XZ Plane (vertical)
+    const gridXZ = new THREE.GridHelper(gridSize, divisions, gridColor, gridColor);
+    gridXZ.rotation.x = Math.PI / 2;
+    gridXZ.position.y = 0; // Centered at submarine's y position
+    gridXZ.material.opacity = gridOpacity;
+    gridXZ.material.transparent = gridTransparent;
+    scene.add(gridXZ);
+    
+    // YZ Plane (vertical)
+    const gridYZ = new THREE.GridHelper(gridSize, divisions, gridColor, gridColor);
+    gridYZ.rotation.z = Math.PI / 2;
+    gridYZ.position.y = 0; // Centered at submarine's y position
+    gridYZ.material.opacity = gridOpacity;
+    gridYZ.material.transparent = gridTransparent;
+    scene.add(gridYZ);
+    
+    // Add thicker lines every 10 meters
+    const majorGridColor = new THREE.Color(0x444444);
+    const majorDivisions = divisions / 10;
+    
+    // XY Major
+    const majorXY = new THREE.GridHelper(gridSize, majorDivisions, majorGridColor, majorGridColor);
+    majorXY.position.y = 0.01; // Slightly above to prevent z-fighting
+    majorXY.material.opacity = 0.5;
+    majorXY.material.transparent = true;
+    scene.add(majorXY);
+    
+    // XZ Major
+    const majorXZ = new THREE.GridHelper(gridSize, majorDivisions, majorGridColor, majorGridColor);
+    majorXZ.rotation.x = Math.PI / 2;
+    majorXZ.position.y = 0.01;
+    majorXZ.material.opacity = 0.5;
+    majorXZ.material.transparent = true;
+    scene.add(majorXZ);
+    
+    // YZ Major
+    const majorYZ = new THREE.GridHelper(gridSize, majorDivisions, majorGridColor, majorGridColor);
+    majorYZ.rotation.z = Math.PI / 2;
+    majorYZ.position.y = 0.01;
+    majorYZ.material.opacity = 0.5;
+    majorYZ.material.transparent = true;
+    scene.add(majorYZ);
+
+    // Add axis labels at the ends
+    const createAxisLabel = (text, color, position) => {
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        canvas.width = 64;
+        canvas.height = 64;
+        
+        context.font = '24px Arial';
+        context.fillStyle = color;
+        context.textAlign = 'center';
+        context.textBaseline = 'middle';
+        context.fillText(text, canvas.width/2, canvas.height/2);
+        
+        const texture = new THREE.CanvasTexture(canvas);
+        const material = new THREE.SpriteMaterial({ 
+            map: texture,
+            transparent: true
+        });
+        const sprite = new THREE.Sprite(material);
+        sprite.position.copy(position);
+        sprite.scale.set(5, 5, 1);
+        return sprite;
+    };
+
+    const labelOffset = axisSize/2 + 5;
+    scene.add(createAxisLabel('X', '#ff0000', new THREE.Vector3(labelOffset, 0, 0)));
+    scene.add(createAxisLabel('Y', '#00ff00', new THREE.Vector3(0, labelOffset, 0)));
+    scene.add(createAxisLabel('Z', '#0000ff', new THREE.Vector3(0, 0, labelOffset)));
+    scene.add(createAxisLabel('-X', '#990000', new THREE.Vector3(-labelOffset, 0, 0)));
+    scene.add(createAxisLabel('-Y', '#009900', new THREE.Vector3(0, -labelOffset, 0)));
+    scene.add(createAxisLabel('-Z', '#000099', new THREE.Vector3(0, 0, -labelOffset)));
 }
 
 function setupCameraControls() {
@@ -302,13 +464,20 @@ function setupControlPanel() {
     controlPanel.addEventListener('click', () => showControlPanel());
 
     const controlPanelControls = document.getElementById('controlPanelControls');
+    const controls = document.getElementById('controls');
+    if (controls.classList.contains('hidden-controls')) {
+        controlPanelControls.checked = false;
+    } else {
+        controlPanelControls.checked = true;
+    }
     controlPanelControls.addEventListener('click', () => {
         console.log("yaya");
         const controls = document.getElementById('controls');
-        if (controls.classList.contains('hidden-controls'))
+        if (controls.classList.contains('hidden-controls')) {
             controls.classList.remove('hidden-controls');
-        else
+        } else {
             controls.classList.add('hidden-controls');
+        }
     });
 
     const controlPanelZones = document.getElementById('controlPanelZones');

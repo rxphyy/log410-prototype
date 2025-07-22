@@ -153,7 +153,7 @@
             </div>
         </div>
 
-        <p style="position: absolute; left: 50%; transform: translateX(-50%); bottom: 0; width: fit-content; padding: 0px 10px 0px 10px; text-align: center; border-radius: 10px 10px 0px 0px; background-color: black; font-family: Arial, sans-serif; font-weight: 800; font-size: 1.4rem;">
+        <p style="position: absolute; left: 50%; transform: translateX(-50%); bottom: 0; width: fit-content; padding: 0px 10px 0px 10px; text-align: center; border-radius: 10px 10px 0px 0px; background-color: black; font-family: Arial, sans-serif; font-weight: 800; font-size: 1.1rem;">
             Dernière mise à jour: 22-07-2025 14:11:55
         </p>
 
@@ -166,13 +166,18 @@
 
             <div id="optionsPanel" style="display: flexbox; flex-direction: column;">
                 <fieldset>
-                    <input id="controlPanelControls" name="controls" type="checkbox"></input>
+                    <input id="controlPanelControls" name="controls" type="checkbox" checked></input>
                     <label for="controls">Afficher les contrôles à l'écran</label>
                 </fieldset>
 
                 <fieldset>
                     <input id="controlPanelZones" name="zones" type="checkbox">
                     <label for="zones">Afficher les zones d'incertitude</label>
+                </fieldset>
+
+                <fieldset>
+                    <input id="controlPanelAUV" name="auv" type="checkbox">
+                    <label for="zones">Afficher l'AUV</label>
                 </fieldset>
             </div>
 

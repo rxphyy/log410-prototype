@@ -5,6 +5,10 @@ let mouse = new THREE.Vector2();
 
 const moveSpeed = 2.0;
 
+var controlPanelShow = false;
+
+var objets = [];
+
 function init() {
     const canvas = document.getElementById('threeJsCanvas');
 
@@ -36,11 +40,12 @@ function init() {
     controls.minDistance = 1;
     controls.maxDistance = 500;
     raycaster = new THREE.Raycaster();
-    createSphereCloud();
+    objets = createSphereCloud();
     createGroundPlane();
     createSubMarine();
     setupCameraControls();
     setupClickHandling();
+    setupControlPanel();
     window.addEventListener('resize', onWindowResize, false);
 
     animate();
@@ -292,6 +297,68 @@ function setupCameraControls() {
     });
 }
 
+function setupControlPanel() {
+    const controlPanel = document.getElementById('controlPanelToggle');
+    controlPanel.addEventListener('click', () => showControlPanel());
+
+    const controlPanelControls = document.getElementById('controlPanelControls');
+    controlPanelControls.addEventListener('click', () => {
+        console.log("yaya");
+        const controls = document.getElementById('controls');
+        if (controls.classList.contains('hidden-controls'))
+            controls.classList.remove('hidden-controls');
+        else
+            controls.classList.add('hidden-controls');
+    });
+
+    const controlPanelZones = document.getElementById('controlPanelZones');
+    controlPanelZones.addEventListener('click', () => console.log("yaya"));
+
+    const controlPanelList = document.getElementById('controlPanelList');
+    controlPanelList.innerHTML = ""; // Clear existing content
+
+    objets.forEach((obj) => {
+        const card = document.createElement('div');
+        card.classList.add('control-card');
+
+        const title = document.createElement('h4');
+        const pos = obj.userData.position;
+        title.textContent = obj.userData.displayName + ` (${pos.x.toFixed(1)}, ${pos.y.toFixed(1)}, ${pos.z.toFixed(1)})`;
+        card.appendChild(title);
+
+        if (obj.userData.coteShark) {
+            const custom = document.createElement('p');
+            custom.textContent = `Côté Shark: ${obj.userData.coteShark}`;
+            card.appendChild(custom);
+        }
+
+        const time = document.createElement('p');
+        time.textContent = `${obj.userData.timestamp}`;
+        card.appendChild(time);
+
+        card.addEventListener('click', () => {
+            displaySphereInfo(obj.userData);
+        });
+
+        controlPanelList.appendChild(card);
+    });
+}
+
+
+function showControlPanel() {
+    const controlPanel = document.getElementById('controlPanel');
+
+    if (!controlPanelShow) {
+        controlPanel.classList.remove("control-panel-leave-to");
+        controlPanel.classList.add("control-panel-enter-active");
+        controlPanelShow = true;
+    } else {
+        controlPanel.classList.remove("control-panel-enter-active");
+        controlPanel.classList.add("control-panel-leave-to");
+        controlPanelShow = false;
+    }
+}
+
 function setupClickHandling() {
     const canvas = renderer.domElement;
     let clickTimeout;
@@ -391,6 +458,52 @@ function getRandomDateTimeWithinFrame() {
 }
 
 function displaySphereInfo(data) {
+    const infoPanel = document.getElementById('infoPanel');
+    const customFieldLabel = document.getElementById('customFieldLabel');
+    const dotCustomLabelText = document.getElementById('dotCustomLabelText');
+
+    document.getElementById('dotName').textContent = data.displayName;
+    document.getElementById('dotId').textContent = data.id;
+    document.getElementById('dotPosition').textContent = `(${data.position.x.toFixed(2)}, ${data.position.y.toFixed(2)}, ${data.position.z.toFixed(2)})`;
+
+    /*
+    // Show connector sphere position in "Dernière position connue"
+    if (data.connectorSphere) {
+        const connPos = data.connectorSphere.position;
+        document.getElementById('dotLastKnown').textContent =
+            `(${connPos.x.toFixed(2)}, ${connPos.y.toFixed(2)}, ${connPos.z.toFixed(2)})`;
+    } else {
+        document.getElementById('dotLastKnown').textContent = data.description || "N/A";
+    }
+        */
+
+    document.getElementById('dotTimestamp').textContent = data.timestamp;
+    document.getElementById('dotRayon').textContent = data.rayon.toFixed(2);
+
+    switch (data.displayName) {
+        case "Gate":
+            customFieldLabel.innerText = "Côté Shark:"
+            dotCustomLabelText.innerText = data.coteShark;
+            break;
+        case "Torpille":
+            customFieldLabel.innerText = "Côté Shark:"
+            dotCustomLabelText.innerText = data.coteShark;
+            break;
+        case "Bin":
+            customFieldLabel.innerText = "Côté Shark:"
+            dotCustomLabelText.innerText = data.coteShark;
+            break;
+        default:
+            customFieldLabel.innerText = ""
+            dotCustomLabelText.innerText = ""
+            break;
+    }
+
+    infoPanel.classList.remove('info-panel-leave-to');
+    infoPanel.classList.add('info-panel-enter-active');
+}
+
+function displayControlPanel() {
     const infoPanel = document.getElementById('infoPanel');
     const customFieldLabel = document.getElementById('customFieldLabel');
     const dotCustomLabelText = document.getElementById('dotCustomLabelText');

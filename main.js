@@ -9,8 +9,8 @@ function init() {
     const canvas = document.getElementById('threeJsCanvas');
 
     scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x000033);
-    scene.fog = new THREE.Fog(0x000055, 10, 400);
+    scene.background = new THREE.Color(0xC3E4F1);
+    //scene.fog = new THREE.Fog(0x000055, 10, 400);
 
     const ambientLight = new THREE.AmbientLight(0x404040, 2);
     scene.add(ambientLight);
@@ -38,6 +38,7 @@ function init() {
     raycaster = new THREE.Raycaster();
     createSphereCloud();
     createGroundPlane();
+    createSubMarine();
     setupCameraControls();
     setupClickHandling();
     window.addEventListener('resize', onWindowResize, false);
@@ -89,13 +90,19 @@ function createSphereCloud() {
         const halo = new THREE.Mesh(
             new THREE.SphereGeometry(haloSize / 2, 16, 16),
             new THREE.MeshBasicMaterial({
-                color: 0xffffff,
+                color: 0xFFFfff, // soft blue halo color
                 transparent: true,
-                opacity: 0.1
+                opacity: 0.1,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false
             })
         );
+
         halo.position.copy(sprite.position);
 
+
+
+        /*
         const offsetDirection = new THREE.Vector3(
             Math.random() * 3 - 1,
             Math.random() * 3 - 1,
@@ -123,6 +130,8 @@ function createSphereCloud() {
                 linewidth: 2
             })
         );
+        */
+
 
         const text = createTextSprite(type.displayName);
         text.position.set(x, y - spriteScale - 0.5, z);
@@ -133,15 +142,32 @@ function createSphereCloud() {
             position: sprite.position.clone(),
             lastKnown: "", // You can remove this if not using it
             timestamp: getRandomDateTimeWithinFrame(),
-            connectorSphere: connectorSphere, // This stores the reference
-            connectorLine: connectorLine,
-            description: "" // Optional: you can add a description here if needed
+            //connectorSphere: connectorSphere, // This stores the reference
+            //connectorLine: connectorLine,
+            coteShark: "",
+            description: "", // Optional: you can add a description here if needed
+            rayon: haloSize
         };
+
+        switch (sprite.userData.displayName) {
+            case "Gate":
+                sprite.userData.coteShark = ["LEFT", "RIGHT"][Math.floor(Math.random() * 2)]
+                break;
+            case "Torpille":
+                sprite.userData.coteShark = ["UP", "DOWN"][Math.floor(Math.random() * 2)]
+                break;
+            case "Bin":
+                sprite.userData.coteShark = ["Q1-2", "Q3-4"][Math.floor(Math.random() * 2)]
+                break;
+            default:
+                break;
+        }
+
 
         scene.add(sprite);
         scene.add(halo);
-        scene.add(connectorSphere);
-        scene.add(connectorLine);
+        // scene.add(connectorSphere);
+        //scene.add(connectorLine);
         scene.add(text);
         spheres.push(sprite);
     }
@@ -152,7 +178,7 @@ function createSphereCloud() {
 function createTextSprite(text) {
     const canvas = document.createElement('canvas');
     const context = canvas.getContext('2d');
-    const fontSize = 32;
+    const fontSize = 45;
     const font = `${fontSize}px Inter`;
 
     context.font = font;
@@ -178,13 +204,37 @@ function createTextSprite(text) {
 }
 
 function createGroundPlane() {
-    const planeGeometry = new THREE.PlaneGeometry(200, 200); // Large plane
-    const planeMaterial = new THREE.MeshLambertMaterial({ color: 0x001122, side: THREE.DoubleSide }); // Dark blue, two-sided
-    const plane = new THREE.Mesh(planeGeometry, planeMaterial);
-    plane.rotation.x = -Math.PI / 2;
-    plane.position.y = -100;
-    plane.receiveShadow = true;
-    scene.add(plane);
+    const boxSize = 200;
+    const box = new THREE.Box3(
+        new THREE.Vector3(-boxSize / 2, -boxSize / 2, -boxSize / 2),
+        new THREE.Vector3(boxSize / 2, boxSize / 2, boxSize / 2)
+    );
+    const helper = new THREE.Box3Helper(box, 0x28a745);
+    scene.add(helper);
+}
+
+
+function createSubMarine() {
+    const boxSize = 100;
+    const textureLoader = new THREE.TextureLoader();
+    const x = (Math.random() - 0.5) * boxSize;
+    const y = (Math.random() - 0.5) * boxSize - 10;
+    const z = (Math.random() - 0.5) * boxSize;
+
+    const sousmar = new THREE.Sprite(
+        new THREE.SpriteMaterial({
+            map: textureLoader.load("./assets/submarine.png"),
+            transparent: true,
+            alphaTest: 0.1
+        })
+    );
+
+    const text = createTextSprite("AUV")
+    text.position.set(x, y - 8, z);
+    sousmar.position.set(x, y, z);
+    sousmar.scale.set(15, 15, 1);
+    scene.add(sousmar);
+    scene.add(text)
 }
 
 function setupCameraControls() {
@@ -250,8 +300,6 @@ function setupClickHandling() {
     let pointerDownMouseY = 0;
 
     canvas.addEventListener('pointerdown', (event) => {
-        console.log("click", event);
-
         if (event.button !== 0) return;
 
         pointerDownMouseX = event.clientX;
@@ -273,10 +321,8 @@ function setupClickHandling() {
                 const intersects = raycaster.intersectObjects(spheres);
 
                 if (intersects.length > 0) {
-                    console.log("sphere was clicked");
                     displaySphereInfo(intersects[0].object.userData);
                 } else {
-                    console.log("NOOOOOO");
                     closeInfoPanel();
                 }
             }
@@ -353,6 +399,7 @@ function displaySphereInfo(data) {
     document.getElementById('dotId').textContent = data.id;
     document.getElementById('dotPosition').textContent = `(${data.position.x.toFixed(2)}, ${data.position.y.toFixed(2)}, ${data.position.z.toFixed(2)})`;
 
+    /*
     // Show connector sphere position in "Dernière position connue"
     if (data.connectorSphere) {
         const connPos = data.connectorSphere.position;
@@ -361,22 +408,23 @@ function displaySphereInfo(data) {
     } else {
         document.getElementById('dotLastKnown').textContent = data.description || "N/A";
     }
+        */
 
     document.getElementById('dotTimestamp').textContent = data.timestamp;
+    document.getElementById('dotRayon').textContent = data.rayon.toFixed(2);
 
-    // Rest of your existing switch case...
     switch (data.displayName) {
         case "Gate":
             customFieldLabel.innerText = "Côté Shark:"
-            dotCustomLabelText.innerText = ["LEFT", "RIGHT"][Math.floor(Math.random() * 2)]
+            dotCustomLabelText.innerText = data.coteShark;
             break;
         case "Torpille":
             customFieldLabel.innerText = "Côté Shark:"
-            dotCustomLabelText.innerText = ["UP", "DOWN"][Math.floor(Math.random() * 2)]
+            dotCustomLabelText.innerText = data.coteShark;
             break;
         case "Bin":
             customFieldLabel.innerText = "Côté Shark:"
-            dotCustomLabelText.innerText = ["Q1-2", "Q3-4"][Math.floor(Math.random() * 2)]
+            dotCustomLabelText.innerText = data.coteShark;
             break;
         default:
             customFieldLabel.innerText = ""

@@ -64,19 +64,28 @@
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path></svg>
                 </button>
             </div>
+
+            <p style="font-family: Arial, sans-serif; font-weight: 800; -webkit-text-stroke: 1.3px black; font-size: 1.5rem;">
+  Dernière mise à jour: 22-07-2025 14:11:55
+</p>
+
+
+
+
         </div>
 
         <div id="infoPanel" class="fixed top-0 right-0 h-full w-80 bg-gray-800 bg-opacity-90 shadow-2xl p-6 z-20 rounded-l-lg info-panel-leave-to">
             <h2 class="text-2xl font-bold mb-4 text-blue-300" id="dotName">Sphere Info</h2>
             <div id="innerInfoPanel">
-                <p class="text-gray-300 text-sm mb-2"><strong class="text-blue-400">ID:</strong> <span id="dotId"></span></p>
-                <p class="text-gray-300 text-sm mb-2"><strong class="text-blue-400">Position:</strong> <span id="dotPosition"></span></p>
-                <p class="text-gray-300 text-sm mb-2"><strong class="text-blue-400">Dernière position connue:</strong> <span id="dotLastKnown"></span></p>
-                <p class="text-gray-300 text-sm mb-2"><strong class="text-blue-400">Date/Temps:</strong> <span id="dotTimestamp"></span></p>
-                <p class="text-gray-300 text-sm mb-4"><strong class="text-blue-400" id="customFieldLabel"></strong> <span id="dotCustomLabelText"></span></p>
+                <p class="text-gray-300 text-lg mb-2"><strong class="text-blue-400">ID de l'objet:</strong> <span id="dotId"></span></p>
+                <p class="text-gray-300 text-lg mb-2"><strong class="text-blue-400">Position:</strong> <span id="dotPosition"></span></p>
+                <p class="text-gray-300 text-lg mb-2"><strong class="text-blue-400">Rayon d'incertitude:</strong> <span id="dotRayon"></span></p>
+                <p class="text-gray-300 text-lg mb-2"><strong class="text-blue-400">Date/Temps:</strong> <span id="dotTimestamp"></span></p>
+                
+                <p class="text-gray-300 text-lg mb-4"><strong class="text-blue-400" id="customFieldLabel"></strong> <span id="dotCustomLabelText"></span></p>
             </div>
 
-            <button id="closeInfoPanel" class="mt-4 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md shadow-md transition duration-200 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-75">Close</button>
+            <button id="closeInfoPanel" class="mt-4 px-4 py-2 bg-red-600 hover:bg-red-700 text-lg text-white rounded-md shadow-md transition duration-200 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-75">Close</button>
         </div>
     </div>
 

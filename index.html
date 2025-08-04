@@ -72,12 +72,18 @@
             color: black;
         }
 
-        .control-card > h4 {
+        .control-card>h4 {
             font-weight: 700;
         }
 
         .control-card:hover {
             background: #f0f8ff;
+        }
+
+        .selected-control-card {
+            background: #ff5555;
+            /* Highlight color for selected card */
+            border: 2px solid #ff0000;
         }
 
         .hidden-controls {
@@ -96,7 +102,8 @@
             <p>Menu</p>
         </a>
 
-        <div id="controls" class="absolute bottom-10 left-1/2 transform -translate-x-1/2 flex flex-col items-center space-y-2 z-10">
+        <div id="controls"
+            class="absolute bottom-10 left-1/2 transform -translate-x-1/2 flex flex-col items-center space-y-2 z-10 hidden-controls">
             <div class="flex space-x-2">
                 <button id="moveForward"
                     class="p-3 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg transition duration-200 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75">
@@ -153,8 +160,14 @@
             </div>
         </div>
 
-        <p style="position: absolute; left: 50%; transform: translateX(-50%); bottom: 0; width: fit-content; padding: 0px 10px 0px 10px; text-align: center; border-radius: 10px 10px 0px 0px; background-color: black; font-family: Arial, sans-serif; font-weight: 800; font-size: 1.1rem;">
-            Dernière mise à jour: 22-07-2025 14:11:55
+        <p id="datetime"
+            style="position: absolute; left: 37%; transform: translateX(-50%); bottom: 0; width: fit-content; padding: 0px 10px 0px 10px; text-align: center; border-radius: 10px 10px 0px 0px; background-color: black; font-family: Arial, sans-serif; font-weight: 800; font-size: 1.1rem;">
+            Dernière mise à jour: Loading...
+        </p>
+
+        <p id="datetime"
+            style="position: absolute; left: 80%; transform: translateX(-50%); bottom: 0; width: fit-content; padding: 0px 10px 0px 10px; text-align: center; border-radius: 10px 10px 0px 0px; background-color: black; font-family: Arial, sans-serif; font-weight: 800; font-size: 1.1rem;">
+            1 carré = 1 mètre
         </p>
 
 
@@ -166,7 +179,7 @@
 
             <div id="optionsPanel" style="display: flexbox; flex-direction: column;">
                 <fieldset>
-                    <input id="controlPanelControls" name="controls" type="checkbox" checked></input>
+                    <input id="controlPanelControls" name="controls" type="checkbox"></input>
                     <label for="controls">Afficher les contrôles à l'écran</label>
                 </fieldset>
 
@@ -190,7 +203,7 @@
 
                 <br>
 
-                <div id="controlPanelList" style="overflow-y: scroll; max-height: 65vh;">
+                <div id="controlPanelList" style="overflow-y: scroll; max-height: 50vh;">
 
                 </div>
             </div>
@@ -202,11 +215,11 @@
             <div id="innerInfoPanel">
                 <p class="text-gray-300 text-lg mb-2"><strong class="text-blue-400">ID de l'objet:</strong> <span
                         id="dotId"></span></p>
-                <p class="text-gray-300 text-lg mb-2"><strong class="text-blue-400">Position:</strong> <span
+                <p class="text-gray-300 text-lg mb-2"><strong class="text-blue-400">Position (m):</strong> <span
                         id="dotPosition"></span></p>
-                <p class="text-gray-300 text-lg mb-2"><strong class="text-blue-400">Rayon d'incertitude:</strong> <span
+                <p class="text-gray-300 text-lg mb-2"><strong class="text-blue-400">Rayon d'incertitude (m):</strong> <span
                         id="dotRayon"></span></p>
-                <p class="text-gray-300 text-lg mb-2"><strong class="text-blue-400">Date/Temps:</strong> <span
+                <p class="text-gray-300 text-lg mb-2"><strong class="text-blue-400">Dernière mise à jour:</strong> <span
                         id="dotTimestamp"></span></p>
 
                 <p class="text-gray-300 text-lg mb-4"><strong class="text-blue-400" id="customFieldLabel"></strong>

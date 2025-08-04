@@ -1,20 +1,22 @@
 let scene, camera, renderer, controls;
 let spheres = [];
+let halos = [];
+let submarine = null;
 let raycaster;
 let mouse = new THREE.Vector2();
+let lastHighlightedObject = null;
+let lastHaloSize = 0;
+let highlightRing = null;
 
 const moveSpeed = 2.0;
-
 var controlPanelShow = false;
-
 var objets = [];
 
 function init() {
     const canvas = document.getElementById('threeJsCanvas');
 
     scene = new THREE.Scene();
-    scene.background = new THREE.Color(0xC3E4F1);
-    //scene.fog = new THREE.Fog(0x000055, 10, 400);
+    scene.background = new THREE.Color(0xE6E6E6);
 
     const ambientLight = new THREE.AmbientLight(0x404040, 2);
     scene.add(ambientLight);
@@ -39,28 +41,38 @@ function init() {
     controls.screenSpacePanning = false;
     controls.minDistance = 1;
     controls.maxDistance = 500;
+    
     raycaster = new THREE.Raycaster();
     objets = createSphereCloud();
     createGroundPlane();
-    createSubMarine();
+    submarine = createSubMarine();
     setupCameraControls();
     setupClickHandling();
     setupControlPanel();
     window.addEventListener('resize', onWindowResize, false);
 
+    // Set current datetime
+    updateDateTime();
+    setInterval(updateDateTime, 1000);
+
     animate();
+}
+
+function updateDateTime() {
+    const now = new Date();
+    const date = now.toLocaleDateString('fr-FR');
+    const time = now.toLocaleTimeString('fr-FR');
+    document.getElementById('datetime').textContent = 
+        `Dernière mise à jour: ${date} ${time}`;
 }
 
 function createSphereCloud() {
     const objects = [];
     const numSpheres = 20;
-    const sphereRadius = 1;
     const boxSize = 100;
     const spriteScale = 4;
     const baseSpriteSize = 2;
     const maxHaloSizeOffset = 15;
-    const connectorSphereRadius = 1;
-    const connectorLineColor = 0x000000;
 
     const dataTypes = [
         { displayName: "Gate", icon: "./assets/Gate.png" },
@@ -78,7 +90,6 @@ function createSphereCloud() {
         const x = (Math.random() - 0.5) * boxSize;
         const y = (Math.random() - 0.5) * boxSize;
         const z = (Math.random() - 0.5) * boxSize;
-
         const type = dataTypes[Math.floor(Math.random() * dataTypes.length)];
 
         const sprite = new THREE.Sprite(
@@ -93,50 +104,17 @@ function createSphereCloud() {
 
         const haloSize = baseSpriteSize + Math.random() * maxHaloSizeOffset;
         const halo = new THREE.Mesh(
-            new THREE.SphereGeometry(haloSize / 2, 16, 16),
+            new THREE.SphereGeometry(haloSize/2, 16, 16),
             new THREE.MeshBasicMaterial({
-                color: 0xFFFfff, // soft blue halo color
+                color: 0xFFFFFF,
                 transparent: true,
                 opacity: 0.1,
                 blending: THREE.AdditiveBlending,
                 depthWrite: false
             })
         );
-
         halo.position.copy(sprite.position);
-
-
-
-        /*
-        const offsetDirection = new THREE.Vector3(
-            Math.random() * 3 - 1,
-            Math.random() * 3 - 1,
-            Math.random() * 3 - 1
-        ).normalize().multiplyScalar(haloSize * 0.8);
-
-        const connectorSphere = new THREE.Mesh(
-            new THREE.SphereGeometry(connectorSphereRadius, 16, 16),
-            new THREE.MeshBasicMaterial({
-                color: 0x000099, 
-                transparent: true,
-                opacity: 1
-            })
-        );
-        connectorSphere.position.copy(sprite.position).add(offsetDirection);
-
-        const lineGeometry = new THREE.BufferGeometry().setFromPoints([
-            sprite.position,
-            connectorSphere.position
-        ]);
-        const connectorLine = new THREE.Line(
-            lineGeometry,
-            new THREE.LineBasicMaterial({
-                color: connectorLineColor,
-                linewidth: 2
-            })
-        );
-        */
-
+        halo.visible = false; // Hidden by default
 
         const text = createTextSprite(type.displayName);
         text.position.set(x, y - spriteScale - 0.5, z);
@@ -145,39 +123,30 @@ function createSphereCloud() {
             id: i + 1,
             displayName: type.displayName,
             position: sprite.position.clone(),
-            lastKnown: "", // You can remove this if not using it
             timestamp: getRandomDateTimeWithinFrame(),
-            //connectorSphere: connectorSphere, // This stores the reference
-            //connectorLine: connectorLine,
-            coteShark: "",
-            description: "", // Optional: you can add a description here if needed
-            rayon: haloSize
+            coteShark: getRandomCoteShark(type.displayName),
+            rayon: haloSize,
+            halo: halo,
+            text: text
         };
-
-        switch (sprite.userData.displayName) {
-            case "Gate":
-                sprite.userData.coteShark = ["LEFT", "RIGHT"][Math.floor(Math.random() * 2)]
-                break;
-            case "Torpille":
-                sprite.userData.coteShark = ["UP", "DOWN"][Math.floor(Math.random() * 2)]
-                break;
-            case "Bin":
-                sprite.userData.coteShark = ["Q1-2", "Q3-4"][Math.floor(Math.random() * 2)]
-                break;
-            default:
-                break;
-        }
-
 
         scene.add(sprite);
         scene.add(halo);
-        // scene.add(connectorSphere);
-        //scene.add(connectorLine);
         scene.add(text);
         spheres.push(sprite);
+        halos.push(halo);
     }
 
     return spheres;
+}
+
+function getRandomCoteShark(type) {
+    switch(type) {
+        case "Gate": return ["LEFT", "RIGHT"][Math.floor(Math.random() * 2)];
+        case "Torpille": return ["UP", "DOWN"][Math.floor(Math.random() * 2)];
+        case "Bin": return ["Q1-2", "Q3-4"][Math.floor(Math.random() * 2)];
+        default: return "";
+    }
 }
 
 function createTextSprite(text) {
@@ -197,21 +166,17 @@ function createTextSprite(text) {
     context.fillStyle = 'white';
     context.strokeStyle = 'black';
     context.lineWidth = 4;
-    context.strokeText(text, canvas.width / 2, canvas.height / 2);
-    context.fillText(text, canvas.width / 2, canvas.height / 2);
+    context.strokeText(text, canvas.width/2, canvas.height/2);
+    context.fillText(text, canvas.width/2, canvas.height/2);
 
     const texture = new THREE.CanvasTexture(canvas);
-    const sprite = new THREE.Sprite(
-        new THREE.SpriteMaterial({ map: texture })
-    );
+    const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture }));
     sprite.scale.set(canvas.width * 0.05, canvas.height * 0.05, 1);
     return sprite;
 }
 
 function createSubMarine() {
     const textureLoader = new THREE.TextureLoader();
-
-    // Position the submarine at the center (0,0,0)
     const sousmar = new THREE.Sprite(
         new THREE.SpriteMaterial({
             map: textureLoader.load("./assets/submarine.png"),
@@ -219,27 +184,31 @@ function createSubMarine() {
             alphaTest: 0.1
         })
     );
-
-    const text = createTextSprite("AUV")
-    text.position.set(0, -8, 0); // Position text below the submarine
-    sousmar.position.set(0, 0, 0); // Center position
+    sousmar.position.set(0, 0, 0);
     sousmar.scale.set(15, 15, 1);
+    sousmar.visible = false; // Hidden by default
+
+    const text = createTextSprite("AUV");
+    text.position.set(0, -8, 0);
+    text.userData = { isAUVText: true };
+    text.visible = false; // Hidden by default
+
     scene.add(sousmar);
-    scene.add(text)
+    scene.add(text);
+    return sousmar;
 }
 
 function createGroundPlane() {
     const boxSize = 200;
-    const gridSize = boxSize; // Grid matches bounding box size
-    const divisions = boxSize; // 1m divisions (since boxSize is 200m)
+    const gridSize = boxSize;
+    const divisions = boxSize;
     
-    // Create the main bounding box helper (color-coded to match axes)
+    // Create the main bounding box helper
     const box = new THREE.Box3(
         new THREE.Vector3(-boxSize / 2, -boxSize / 2, -boxSize / 2),
         new THREE.Vector3(boxSize / 2, boxSize / 2, boxSize / 2)
     );
     
-    // Create colored box faces that match the axis colors
     const edges = new THREE.EdgesGeometry(new THREE.BoxGeometry(boxSize, boxSize, boxSize));
     const line = new THREE.LineSegments(
         edges,
@@ -247,111 +216,62 @@ function createGroundPlane() {
     );
     scene.add(line);
     
-    // Create color-coded axes centered at (0,0,0) where submarine is
-    const axisSize = boxSize * 0.8; // Make axes slightly smaller than bounding box
-    
-    // X-axis (Red)
-    const xAxis = new THREE.ArrowHelper(
-        new THREE.Vector3(1, 0, 0),
-        new THREE.Vector3(0, 0, 0),
-        axisSize/2,
-        0xff0000,
-        2,  // headLength
-        1   // headWidth
-    );
-    scene.add(xAxis);
-    
-    // Y-axis (Green)
-    const yAxis = new THREE.ArrowHelper(
-        new THREE.Vector3(0, 1, 0),
-        new THREE.Vector3(0, 0, 0),
-        axisSize/2,
-        0x00ff00,
-        2,
-        1
-    );
-    scene.add(yAxis);
-    
-    // Z-axis (Blue)
-    const zAxis = new THREE.ArrowHelper(
-        new THREE.Vector3(0, 0, 1),
-        new THREE.Vector3(0, 0, 0),
-        axisSize/2,
-        0x0000ff,
-        2,
-        1
-    );
-    scene.add(zAxis);
-    
-    // Negative X-axis (Darker Red)
-    const negXAxis = new THREE.ArrowHelper(
-        new THREE.Vector3(-1, 0, 0),
-        new THREE.Vector3(0, 0, 0),
-        axisSize/2,
-        0x990000,
-        2,
-        1
-    );
-    scene.add(negXAxis);
-    
-    // Negative Y-axis (Darker Green)
-    const negYAxis = new THREE.ArrowHelper(
-        new THREE.Vector3(0, -1, 0),
-        new THREE.Vector3(0, 0, 0),
-        axisSize/2,
-        0x009900,
-        2,
-        1
-    );
-    scene.add(negYAxis);
-    
-    // Negative Z-axis (Darker Blue)
-    const negZAxis = new THREE.ArrowHelper(
-        new THREE.Vector3(0, 0, -1),
-        new THREE.Vector3(0, 0, 0),
-        axisSize/2,
-        0x000099,
-        2,
-        1
-    );
-    scene.add(negZAxis);
+    const axisSize = boxSize * 0.8;
+    const lineThickness = 1.5;
+    const headLength = 4;
+    const headWidth = 2;
 
-    // Create a 3D grid centered at submarine position (0,0,0)
-    const gridColor = new THREE.Color(0x888888);
-    const gridOpacity = 0.2;
-    const gridTransparent = true;
-    
-    // XY Plane (horizontal at y=0)
-    const gridXY = new THREE.GridHelper(gridSize, divisions, gridColor, gridColor);
-    gridXY.position.y = 0; // Centered at submarine's y position
-    gridXY.material.opacity = gridOpacity;
-    gridXY.material.transparent = gridTransparent;
-    scene.add(gridXY);
-    
-    // XZ Plane (vertical)
-    const gridXZ = new THREE.GridHelper(gridSize, divisions, gridColor, gridColor);
-    gridXZ.rotation.x = Math.PI / 2;
-    gridXZ.position.y = 0; // Centered at submarine's y position
-    gridXZ.material.opacity = gridOpacity;
-    gridXZ.material.transparent = gridTransparent;
-    scene.add(gridXZ);
-    
-    // YZ Plane (vertical)
-    const gridYZ = new THREE.GridHelper(gridSize, divisions, gridColor, gridColor);
-    gridYZ.rotation.z = Math.PI / 2;
-    gridYZ.position.y = 0; // Centered at submarine's y position
-    gridYZ.material.opacity = gridOpacity;
-    gridYZ.material.transparent = gridTransparent;
-    scene.add(gridYZ);
-    
-    // Add thicker lines every 10 meters
-    const majorGridColor = new THREE.Color(0x444444);
+    // Helper function to create a thick arrow
+    const createThickArrow = (direction, color, origin = new THREE.Vector3(0, 0, 0)) => {
+        const group = new THREE.Group();
+        const length = axisSize / 2;
+        const arrowDir = direction.clone().normalize();
+        
+        // Line part (using cylinder)
+        const lineGeometry = new THREE.CylinderGeometry(
+            lineThickness / 2, 
+            lineThickness / 2, 
+            length - headLength, 
+            8
+        );
+        lineGeometry.translate(0, (length - headLength) / 2, 0);
+        const lineMaterial = new THREE.MeshBasicMaterial({ color: color });
+        const lineMesh = new THREE.Mesh(lineGeometry, lineMaterial);
+        
+        // Arrowhead part (using cone)
+        const coneGeometry = new THREE.ConeGeometry(headWidth, headLength, 16);
+        coneGeometry.translate(0, length - headLength / 2, 0);
+        const coneMesh = new THREE.Mesh(coneGeometry, lineMaterial);
+        
+        // Rotate to point in the correct direction
+        const axis = new THREE.Vector3().crossVectors(new THREE.Vector3(0, 1, 0), arrowDir);
+        const angle = Math.acos(new THREE.Vector3(0, 1, 0).dot(arrowDir));
+        lineMesh.quaternion.setFromAxisAngle(axis, angle);
+        coneMesh.quaternion.setFromAxisAngle(axis, angle);
+        
+        group.add(lineMesh);
+        group.add(coneMesh);
+        group.position.copy(origin);
+        
+        return group;
+    };
+
+    // Create all axes
+    scene.add(createThickArrow(new THREE.Vector3(1, 0, 0), 0xff0000)); // X
+    scene.add(createThickArrow(new THREE.Vector3(0, 1, 0), 0x00ff00)); // Y
+    scene.add(createThickArrow(new THREE.Vector3(0, 0, 1), 0x0000ff)); // Z
+    scene.add(createThickArrow(new THREE.Vector3(-1, 0, 0), 0x990000)); // -X
+    scene.add(createThickArrow(new THREE.Vector3(0, -1, 0), 0x009900)); // -Y
+    scene.add(createThickArrow(new THREE.Vector3(0, 0, -1), 0x000099)); // -Z
+
+    // Add major grids
+    const majorGridColor = new THREE.Color(0x222222);
     const majorDivisions = divisions / 10;
     
     // XY Major
     const majorXY = new THREE.GridHelper(gridSize, majorDivisions, majorGridColor, majorGridColor);
-    majorXY.position.y = 0.01; // Slightly above to prevent z-fighting
-    majorXY.material.opacity = 0.5;
+    majorXY.position.y = 0.01;
+    majorXY.material.opacity = 0.3;
     majorXY.material.transparent = true;
     scene.add(majorXY);
     
@@ -359,7 +279,7 @@ function createGroundPlane() {
     const majorXZ = new THREE.GridHelper(gridSize, majorDivisions, majorGridColor, majorGridColor);
     majorXZ.rotation.x = Math.PI / 2;
     majorXZ.position.y = 0.01;
-    majorXZ.material.opacity = 0.5;
+    majorXZ.material.opacity = 0.3;
     majorXZ.material.transparent = true;
     scene.add(majorXZ);
     
@@ -367,7 +287,7 @@ function createGroundPlane() {
     const majorYZ = new THREE.GridHelper(gridSize, majorDivisions, majorGridColor, majorGridColor);
     majorYZ.rotation.z = Math.PI / 2;
     majorYZ.position.y = 0.01;
-    majorYZ.material.opacity = 0.5;
+    majorYZ.material.opacity = 0.3;
     majorYZ.material.transparent = true;
     scene.add(majorYZ);
 
@@ -375,23 +295,29 @@ function createGroundPlane() {
     const createAxisLabel = (text, color, position) => {
         const canvas = document.createElement('canvas');
         const context = canvas.getContext('2d');
-        canvas.width = 64;
-        canvas.height = 64;
-        
-        context.font = '24px Arial';
-        context.fillStyle = color;
+        const fontSize = 48;
+        canvas.width = 128;
+        canvas.height = 128;
+
+        context.font = `bold ${fontSize}px Arial`;
         context.textAlign = 'center';
         context.textBaseline = 'middle';
-        context.fillText(text, canvas.width/2, canvas.height/2);
-        
+
+        context.strokeStyle = 'black';
+        context.lineWidth = 10;
+        context.strokeText(text, canvas.width / 2, canvas.height / 2);
+
+        context.fillStyle = color;
+        context.fillText(text, canvas.width / 2, canvas.height / 2);
+
         const texture = new THREE.CanvasTexture(canvas);
-        const material = new THREE.SpriteMaterial({ 
+        const material = new THREE.SpriteMaterial({
             map: texture,
             transparent: true
         });
         const sprite = new THREE.Sprite(material);
         sprite.position.copy(position);
-        sprite.scale.set(5, 5, 1);
+        sprite.scale.set(10, 10, 1);
         return sprite;
     };
 
@@ -423,6 +349,7 @@ function setupCameraControls() {
     closeInfoPanelBtn.addEventListener('click', () => {
         infoPanel.classList.remove('info-panel-enter-active');
         infoPanel.classList.add('info-panel-leave-to');
+        unhighlightObject();
     });
 
     document.addEventListener('keydown', (event) => {
@@ -460,35 +387,47 @@ function setupCameraControls() {
 }
 
 function setupControlPanel() {
-    const controlPanel = document.getElementById('controlPanelToggle');
-    controlPanel.addEventListener('click', () => showControlPanel());
+    const controlPanelToggle = document.getElementById('controlPanelToggle');
+    controlPanelToggle.addEventListener('click', showControlPanel);
 
+    // Controls toggle (hidden by default)
+    const controlsDiv = document.getElementById('controls');
     const controlPanelControls = document.getElementById('controlPanelControls');
-    const controls = document.getElementById('controls');
-    if (controls.classList.contains('hidden-controls')) {
-        controlPanelControls.checked = false;
-    } else {
-        controlPanelControls.checked = true;
-    }
-    controlPanelControls.addEventListener('click', () => {
-        console.log("yaya");
-        const controls = document.getElementById('controls');
-        if (controls.classList.contains('hidden-controls')) {
-            controls.classList.remove('hidden-controls');
-        } else {
-            controls.classList.add('hidden-controls');
+    controlsDiv.classList.add('hidden-controls');
+    controlPanelControls.checked = false;
+    controlPanelControls.addEventListener('change', (e) => {
+        controlsDiv.classList.toggle('hidden-controls', !e.target.checked);
+    });
+
+    // Zones toggle (hidden by default)
+    const controlPanelZones = document.getElementById('controlPanelZones');
+    controlPanelZones.checked = false;
+    controlPanelZones.addEventListener('change', (e) => {
+        halos.forEach(halo => halo.visible = e.target.checked);
+    });
+
+    // AUV toggle (hidden by default)
+    const controlPanelAUV = document.getElementById('controlPanelAUV');
+    controlPanelAUV.checked = false;
+    controlPanelAUV.addEventListener('change', (e) => {
+        if (submarine) {
+            submarine.visible = e.target.checked;
+            scene.children.forEach(child => {
+                if (child.userData?.isAUVText) {
+                    child.visible = e.target.checked;
+                }
+            });
         }
     });
 
-    const controlPanelZones = document.getElementById('controlPanelZones');
-    controlPanelZones.addEventListener('click', () => console.log("yaya"));
-
+    // Populate object list
     const controlPanelList = document.getElementById('controlPanelList');
-    controlPanelList.innerHTML = ""; // Clear existing content
-
+    controlPanelList.innerHTML = "";
+    
     objets.forEach((obj) => {
         const card = document.createElement('div');
         card.classList.add('control-card');
+        card.dataset.id = obj.userData.id;
 
         const title = document.createElement('h4');
         const pos = obj.userData.position;
@@ -507,10 +446,87 @@ function setupControlPanel() {
 
         card.addEventListener('click', () => {
             displaySphereInfo(obj.userData);
+            highlightObject(obj);
         });
 
         controlPanelList.appendChild(card);
     });
+}
+
+function highlightObject(object) {
+    if (lastHighlightedObject) {
+        unhighlightObject();
+    }
+
+    if (!object) return;
+
+    lastHighlightedObject = object;
+
+    // Create a canvas for the ring sprite
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    const size = 256; // Canvas size
+    canvas.width = size;
+    canvas.height = size;
+
+    // Draw red ring
+    const center = size / 2;
+    const radius = size * 0.4;
+    const thickness = size * 0.1;
+    
+    context.beginPath();
+    context.arc(center, center, radius, 0, Math.PI * 2);
+    context.lineWidth = thickness;
+    context.strokeStyle = 'rgba(255, 0, 0, 0.8)';
+    context.stroke();
+
+    // Create sprite material
+    const texture = new THREE.CanvasTexture(canvas);
+    const material = new THREE.SpriteMaterial({
+        map: texture,
+        transparent: true,
+        depthTest: false
+    });
+
+    // Create sprite
+    highlightRing = new THREE.Sprite(material);
+    highlightRing.scale.set(8, 8, 1); // Adjust size as needed
+    highlightRing.position.copy(object.position);
+    highlightRing.position.y += 0.1; // Slight offset to prevent z-fighting
+    
+    // Make sprite always face camera
+    highlightRing.onBeforeRender = function() {
+        this.quaternion.copy(camera.quaternion);
+    };
+
+    scene.add(highlightRing);
+
+    // Highlight in control panel
+    const cards = document.querySelectorAll('.control-card');
+    cards.forEach(card => {
+        if (card.dataset.id == object.userData.id) {
+            card.style.backgroundColor = '#84a9be';
+            card.style.border = '6px solid #ff3434';
+        } else {
+            card.style.backgroundColor = '';
+            card.style.border = '';
+        }
+    });
+}
+
+function unhighlightObject() {
+    if (highlightRing) {
+        scene.remove(highlightRing);
+        highlightRing = null;
+    }
+
+    const cards = document.querySelectorAll('.control-card');
+    cards.forEach(card => {
+        card.style.backgroundColor = '';
+        card.style.border = '';
+    });
+
+    lastHighlightedObject = null;
 }
 
 
@@ -557,9 +573,9 @@ function setupClickHandling() {
                 const intersects = raycaster.intersectObjects(spheres);
 
                 if (intersects.length > 0) {
-                    displaySphereInfo(intersects[0].object.userData);
-                } else {
-                    closeInfoPanel();
+                    const object = intersects[0].object;
+                    displaySphereInfo(object.userData);
+                    highlightObject(object);
                 }
             }
         }, 20);
@@ -607,18 +623,13 @@ function moveCamera(direction) {
 
 function getRandomDateTimeWithinFrame() {
     const now = Date.now();
-
-    const nbMinutesPlus = 5;
-    const fiveMinutesLater = now + (nbMinutesPlus * 60 * 1000);
-
+    const fiveMinutesLater = now + (5 * 60 * 1000);
     const randomTimestamp = Math.random() * (fiveMinutesLater - now) + now;
-
     const randomDate = new Date(randomTimestamp);
 
     const day = String(randomDate.getDate()).padStart(2, '0');
-    const month = String(randomDate.getMonth() + 1).padStart(2, '0'); // Month is 0-indexed
+    const month = String(randomDate.getMonth() + 1).padStart(2, '0');
     const year = randomDate.getFullYear();
-
     const hours = String(randomDate.getHours()).padStart(2, '0');
     const minutes = String(randomDate.getMinutes()).padStart(2, '0');
     const seconds = String(randomDate.getSeconds()).padStart(2, '0');
@@ -633,95 +644,39 @@ function displaySphereInfo(data) {
 
     document.getElementById('dotName').textContent = data.displayName;
     document.getElementById('dotId').textContent = data.id;
-    document.getElementById('dotPosition').textContent = `(${data.position.x.toFixed(2)}, ${data.position.y.toFixed(2)}, ${data.position.z.toFixed(2)})`;
-
-    /*
-    // Show connector sphere position in "Dernière position connue"
-    if (data.connectorSphere) {
-        const connPos = data.connectorSphere.position;
-        document.getElementById('dotLastKnown').textContent =
-            `(${connPos.x.toFixed(2)}, ${connPos.y.toFixed(2)}, ${connPos.z.toFixed(2)})`;
-    } else {
-        document.getElementById('dotLastKnown').textContent = data.description || "N/A";
-    }
-        */
-
-    document.getElementById('dotTimestamp').textContent = data.timestamp;
+    document.getElementById('dotPosition').textContent = 
+        `(${data.position.x.toFixed(2)}, ${data.position.y.toFixed(2)}, ${data.position.z.toFixed(2)})`;
     document.getElementById('dotRayon').textContent = data.rayon.toFixed(2);
-
-    switch (data.displayName) {
-        case "Gate":
-            customFieldLabel.innerText = "Côté Shark:"
-            dotCustomLabelText.innerText = data.coteShark;
-            break;
-        case "Torpille":
-            customFieldLabel.innerText = "Côté Shark:"
-            dotCustomLabelText.innerText = data.coteShark;
-            break;
-        case "Bin":
-            customFieldLabel.innerText = "Côté Shark:"
-            dotCustomLabelText.innerText = data.coteShark;
-            break;
-        default:
-            customFieldLabel.innerText = ""
-            dotCustomLabelText.innerText = ""
-            break;
-    }
-
-    infoPanel.classList.remove('info-panel-leave-to');
-    infoPanel.classList.add('info-panel-enter-active');
-}
-
-function displayControlPanel() {
-    const infoPanel = document.getElementById('infoPanel');
-    const customFieldLabel = document.getElementById('customFieldLabel');
-    const dotCustomLabelText = document.getElementById('dotCustomLabelText');
-
-    document.getElementById('dotName').textContent = data.displayName;
-    document.getElementById('dotId').textContent = data.id;
-    document.getElementById('dotPosition').textContent = `(${data.position.x.toFixed(2)}, ${data.position.y.toFixed(2)}, ${data.position.z.toFixed(2)})`;
-
-    /*
-    // Show connector sphere position in "Dernière position connue"
-    if (data.connectorSphere) {
-        const connPos = data.connectorSphere.position;
-        document.getElementById('dotLastKnown').textContent =
-            `(${connPos.x.toFixed(2)}, ${connPos.y.toFixed(2)}, ${connPos.z.toFixed(2)})`;
-    } else {
-        document.getElementById('dotLastKnown').textContent = data.description || "N/A";
-    }
-        */
-
     document.getElementById('dotTimestamp').textContent = data.timestamp;
-    document.getElementById('dotRayon').textContent = data.rayon.toFixed(2);
 
-    switch (data.displayName) {
-        case "Gate":
-            customFieldLabel.innerText = "Côté Shark:"
-            dotCustomLabelText.innerText = data.coteShark;
-            break;
-        case "Torpille":
-            customFieldLabel.innerText = "Côté Shark:"
-            dotCustomLabelText.innerText = data.coteShark;
-            break;
-        case "Bin":
-            customFieldLabel.innerText = "Côté Shark:"
-            dotCustomLabelText.innerText = data.coteShark;
-            break;
-        default:
-            customFieldLabel.innerText = ""
-            dotCustomLabelText.innerText = ""
-            break;
+    if (data.coteShark) {
+        customFieldLabel.textContent = "Côté Shark:";
+        dotCustomLabelText.textContent = data.coteShark;
+    } else {
+        customFieldLabel.textContent = "";
+        dotCustomLabelText.textContent = "";
     }
 
-    infoPanel.classList.remove('info-panel-leave-to');
-    infoPanel.classList.add('info-panel-enter-active');
+    if (infoPanel.classList.contains('info-panel-leave-to')) {
+        infoPanel.classList.remove('info-panel-leave-to');
+        infoPanel.classList.add('info-panel-enter-active');
+    }
+
+    // Scroll to the highlighted card
+    const selected_card = document.querySelector(`.control-card[data-id="${data.id}"]`);
+    if (selected_card) {
+        selected_card.scrollIntoView({
+            behavior: 'smooth',
+            block: 'nearest'
+        });
+    }
 }
 
 function closeInfoPanel() {
     const infoPanel = document.getElementById('infoPanel');
     infoPanel.classList.remove('info-panel-enter-active');
     infoPanel.classList.add('info-panel-leave-to');
+    unhighlightObject();
 }
 
 function onWindowResize() {

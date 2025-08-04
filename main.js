@@ -222,39 +222,48 @@ function createGroundPlane() {
     const headWidth = 2;
 
     // Helper function to create a thick arrow
-    const createThickArrow = (direction, color, origin = new THREE.Vector3(0, 0, 0)) => {
-        const group = new THREE.Group();
-        const length = axisSize / 2;
-        const arrowDir = direction.clone().normalize();
-        
-        // Line part (using cylinder)
-        const lineGeometry = new THREE.CylinderGeometry(
-            lineThickness / 2, 
-            lineThickness / 2, 
-            length - headLength, 
-            8
-        );
-        lineGeometry.translate(0, (length - headLength) / 2, 0);
-        const lineMaterial = new THREE.MeshBasicMaterial({ color: color });
-        const lineMesh = new THREE.Mesh(lineGeometry, lineMaterial);
-        
-        // Arrowhead part (using cone)
-        const coneGeometry = new THREE.ConeGeometry(headWidth, headLength, 16);
-        coneGeometry.translate(0, length - headLength / 2, 0);
-        const coneMesh = new THREE.Mesh(coneGeometry, lineMaterial);
-        
-        // Rotate to point in the correct direction
-        const axis = new THREE.Vector3().crossVectors(new THREE.Vector3(0, 1, 0), arrowDir);
-        const angle = Math.acos(new THREE.Vector3(0, 1, 0).dot(arrowDir));
-        lineMesh.quaternion.setFromAxisAngle(axis, angle);
-        coneMesh.quaternion.setFromAxisAngle(axis, angle);
-        
-        group.add(lineMesh);
-        group.add(coneMesh);
-        group.position.copy(origin);
-        
-        return group;
-    };
+const createThickArrow = (direction, color, origin = new THREE.Vector3(0, 0, 0)) => {
+    const group = new THREE.Group();
+    const length = axisSize / 2;
+    const arrowDir = direction.clone().normalize();
+    
+    // Line part (using cylinder)
+    const lineGeometry = new THREE.CylinderGeometry(
+        lineThickness / 2, 
+        lineThickness / 2, 
+        length - headLength, 
+        8
+    );
+    lineGeometry.translate(0, (length - headLength) / 2, 0);
+    const lineMaterial = new THREE.MeshBasicMaterial({ color: color });
+    const lineMesh = new THREE.Mesh(lineGeometry, lineMaterial);
+    
+    // Arrowhead part (using cone)
+    const coneGeometry = new THREE.ConeGeometry(headWidth, headLength, 16);
+    coneGeometry.translate(0, length - headLength / 2, 0);
+    const coneMesh = new THREE.Mesh(coneGeometry, lineMaterial);
+    
+    // Fix: Add a check for the negative Y-axis to handle the rotation correctly
+    let axis = new THREE.Vector3().crossVectors(new THREE.Vector3(0, 1, 0), arrowDir);
+    let angle = Math.acos(new THREE.Vector3(0, 1, 0).dot(arrowDir));
+    
+    // If the axis of rotation is a zero vector (e.g., for negative Y),
+    // use an alternative axis and angle
+    if (axis.lengthSq() === 0 && arrowDir.y < 0) {
+        // The direction is (0, -1, 0), so we can rotate around the X-axis by PI
+        axis.set(1, 0, 0);
+        angle = Math.PI;
+    }
+    
+    lineMesh.quaternion.setFromAxisAngle(axis, angle);
+    coneMesh.quaternion.setFromAxisAngle(axis, angle);
+    
+    group.add(lineMesh);
+    group.add(coneMesh);
+    group.position.copy(origin);
+    
+    return group;
+};
 
     // Create all axes
     scene.add(createThickArrow(new THREE.Vector3(1, 0, 0), 0xff0000)); // X
